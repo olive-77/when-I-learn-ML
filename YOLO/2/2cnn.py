@@ -1,9 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from numpy.distutils.fcompiler import intel
 from  torchvision import datasets, transforms
 from torch.utils.data import random_split
-
+import intel_extension_for_pytorch as ipex
 #from LR.debug_package import running_loss
 
 device = torch.device("xpu")
@@ -26,6 +27,8 @@ class Net(nn.Module):
 model = Net().to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
+model, optimizer = ipex.optimize(model, optimizer=optimizer)
+
 epochs = 4
 
 transform = transforms.Compose([

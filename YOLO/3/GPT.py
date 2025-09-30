@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+import  intel_extension_for_pytorch as intel
 
 # hyperparameters
 batch_size = 64 # how many independent sequences will we process in parallel?
@@ -8,7 +9,7 @@ block_size = 256 # what is the maximum context length for predictions?
 max_iters = 5000
 eval_interval = 500
 learning_rate = 3e-4
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'xpu'
 eval_iters = 200
 n_embd = 384
 n_head = 6
@@ -47,7 +48,7 @@ def get_batch(split):
     x, y = x.to(device), y.to(device)
     return x, y
 
-@torch.no_grad()
+@torch.no_grad()  #这个函数还没看哦~
 def estimate_loss():
     out = {}
     model.eval()
@@ -158,7 +159,7 @@ class GPTLanguageModel(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, idx, targets=None):
-        B, T = idx.shape
+        B, T = idx.shape  #  idx 的形状：B=batch_size，T=block_size
 
         # idx and targets are both (B,T) tensor of integers
         tok_emb = self.token_embedding_table(idx) # (B,T,C)
@@ -198,17 +199,28 @@ class GPTLanguageModel(nn.Module):
 model = GPTLanguageModel()
 m = model.to(device)
 # print the number of parameters in the model
-print(sum(p.numel() for p in m.parameters())/1e6, 'M parameters')
+#print(sum(p.numel() for p in m.parameters())/1e6, 'M parameters')
 
 # create a PyTorch optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-
+m,optimizer = intel.optimize(m, optimizer=optimizer )
+best_loss = 1000
+t=0
 for iter in range(max_iters):
 
     # every once in a while evaluate the loss on train and val sets
     if iter % eval_interval == 0 or iter == max_iters - 1:
         losses = estimate_loss()
+        n=losses['val'].item()
+        if n < best_loss:
+            best_loss =n
+            #torch.save(model.state_dict(), './model.pth')
+        else :
+             t+=1
         print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+        if t==2:
+            break
+
 
     # sample a batch of data
     xb, yb = get_batch('train')
