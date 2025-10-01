@@ -49,7 +49,8 @@
 3. self.apply(self._init_weights) 的作用是自动搜寻这个类里的函数，然后对每个函数各自使用self._init_weights，即更新参数。  
 4. 使用 F.cross_entropy(logits, targets) 可以同时完成softmax 和 Loss 计算  
 5. 使用。item()将张量转化为数值，从而与普通数据进行比较  
-6. 
+6. contiguous函数是使得数据在内存上连续，比如矩阵转置时会变得不连续。
+7. view是改变矩阵形状。但这里有个前提是矩阵内存是连续的，也就是说这玩意与前者绑定
 
 ## 输出说明：
 1.0 初始代码，直接运行  
