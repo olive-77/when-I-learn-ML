@@ -8,6 +8,10 @@
 #### 1.copy下来之后喂给豆包，一句句看懂了，当作预习，然后再去看视频。
 #### 2.看了篇 [CSDN:从头搭建GPT(Andrej Karpathy) 笔记](https://blog.csdn.net/level_code/article/details/136941813?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7EBlogOpenSearchComplete%7EPaidSort-1-136941813-blog-139716448.235%5Ev43%5Econtrol&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7EBlogOpenSearchComplete%7EPaidSort-1-136941813-blog-139716448.235%5Ev43%5Econtrol&utm_relevant_index=1)
 #### 3.直接绕过视频开始调程序  
+### 4.根据推荐看了旋转位置编码RoPE
+### 5.尝试学习hugging face 
+但是不会搭梯子，一条都跑不起来，搞了好久，最后放弃了
+
 
  ## 遇到的问题
 1. Karpathy的视频长达4个小时。加上是英文，刚开始看就感觉很痛苦  
@@ -31,9 +35,12 @@
 是因为普通torch不能很好适配xpu硬件）
 
  ##  笔记 ：about model
+0. 很遗憾，写代码的时候总是要把论文里的哪个架构图放在旁边，不然总是会忘记某几步。
 1. feedforward是为了给block增加非线性。因为前面的mask multi head为矩阵惩罚，说到底还是线性变化  
-2. block size是窗口大小      
-  batch size则是批次中含有的block数
+paper：This consists of two linear transformations with a ReLU activation in between.
+ FFN(x) = max(0xW1 +b1)W2 +b
+2. block size是长文本分块时的长度  
+  batch size则是一次同时处理的句子数
 3. ？？？ GPT2 模型上的更改；zero-shot
 4. dropout 可以减少同层神经元之间的依赖，防止overfitting。在transformer中应该可以认为每个token对应的为神经元
 5. 使用单一属性文本有利于提高训练效果，避免模型confusion；另外稍微处理一下重复部分
@@ -42,6 +49,10 @@
 迭代合并：统计所有相邻单位的共现频率，将频率最高的一对合并为新 Token，重复此过程直到达到预设词汇表大小（如 5 万）。  
 例：初始拆分 “low”→“l”“o”“w”，“lower”→“l”“o”“w”“e”“r”，若 “ow” 共现频率最高，则合并为 “ow”，后续 “low” 拆分为 “l”“ow”。  
 编码逻辑：对新文本，优先匹配最长可能的 Token（贪心匹配），确保拆分效率最高。  
+7. 旋转位置编码RoPE ，矩阵乘法，将高纬度（偶数维度）拆分成多个正交平面，在每个平面上进行旋转  
+需要注意的是角度的选取，通过避开PI从而使每个角度各不相同。实践时因为旋转矩阵是稀疏矩阵(对角矩阵），计算成本十分庞大，所以会
+进行一点结构上的变化，用向量的叉乘形成角度的矩阵；把原始矩阵分成两半，配凑旋转的哪个表达式。  
+补充一下，transformers一开始使用的绝对位置编码器在语句长度超出训练范围时不适用。
 
 ## 笔记 ：about code
 1. nn.module 默认要有一个forward函数，然后像 model(xb, yb) 就会直接调用forward函数。当然也可以用 m.forward()表示，但这样会丧失有些默认pytorch服务，不推荐。  
@@ -64,5 +75,4 @@
 
 ## 其他（给我自己看的）
 1. LSTM ：一直以为这个东西随着transformer的出现已经过气了，索性就没有学，
-但是突然发现 xLSTM 架构的提出，重新激活了对这一经典模型的研究。  
-那就稍微了解一下这个算法吧
+但是突然发现 xLSTM 架构的提出，重新激活了对这一经典模型的研究。
