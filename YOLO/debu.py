@@ -1,46 +1,82 @@
+#SXP开头的是我自己写的注释，其他是豆包生成的
+# 1. 导入必要库（固定）
 import torch
-from debug import Rotator
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
+#model_name = "uer/gpt2-chinese-base"  # 中文模型，而非默认"gpt2" SXP 镜像上面好像没有这个模型，其他的中文模型看半天都要登录，算了，就英文
+model_name ='gpt2'
+tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+model = GPT2LMHeadModel.from_pretrained(model_name)
 
-# 设置随机种子，确保结果固定
-torch.manual_seed(0)
+device=('xpu')
+model.to(device)
+model=torch.compile(model)
 
-# 1. 简化参数（更小的维度和序列长度）
-batch_size = 1  # 仅1个样本
-num_heads = 1   # 仅1个注意力头
-seq_len = 2     # 仅2个序列位置
-hidden_dim = 4  # 更小的隐藏维度（必须为偶数）
 
-# 2. 生成固定的输入数据（而非随机数）
-# 输入向量设为简单固定值：[[[1,2,3,4], [5,6,7,8]]]
-x = torch.tensor([
-    [
-        [1.0, 2.0, 3.0, 4.0],  # 位置0的向量
-        [5.0, 6.0, 7.0, 8.0]   # 位置1的向量
-    ]
-]).unsqueeze(0)  # 增加batch维度，形状变为[1, 1, 2, 4]
+# 3. 模型交互核心逻辑（挖空版，需你补充）
+def model_interact(model, tokenizer, user_input: str):
+    """
+    实现“用户输入→模型输出”的交互
+    user_input: 你的提问（比如“鸣人，什么是忍道？”）
+    """
 
-# 位置ID固定为[0, 1]
-position_ids = torch.arange(seq_len)  # [0, 1]
+    # TODO 1：构建提示词（参考格式：用户：xxx\n鸣人：）
+    # 示例方向：拼接成符合角色对话的格式，引导模型生成对应风格回复
+    prompt = [f"Users:{user_input}\nKobe Bryant:",
+            "Users:damm!\nKobe Bryant:"
+     ] # 请补充，比如 f"用户：{user_input}\n鸣人："
+# SXP1. f是python中的一种语法，诣在直接往引用句里面填入{变量名}
+# SXP2. 这样写的目的是为了在每次交互的过程中，有一个动态的prompt。也就是说，这个函数是同时用在训练微调和模型测试上的
+    # TODO 2：将提示词转为模型可识别的token（调用tokenizer）
+    # 示例方向：用tokenizer.encode或tokenizer(return_tensors="pt")
+    inputs= tokenizer(prompt,return_tensors="pt")
+    inputs = inputs.to(device)  
+    # 请补充，注意将inputs放到模型所在设备（model.device）
+#SXP这样看来，这里还只是实际使用的时候的函数，并没有微调部分的空间。
+#SXP不过问题不大，到时后写个判断语句，一种拿prommt，一种拿csv的数据。
+#SXP哦，最好的是直接传进来的就是相同模式的，那么就之接
+    # TODO 3：模型生成回复（调用model.generate）
+    # 关键参数：max_new_tokens（生成长度）、do_sample（是否多样）、temperature（随机性）
+    outputs = model.generate(
+        **inputs,  # 传入inputs
+        max_new_tokens=64,  # 建议填50-100
+        do_sample=True,  # 建议True（多样）
+        #SXP这里的do——sample就是说不一定选择概率最高的token，而是会有一定随机性
+        #SXP通常与temperature绑定，温度越小越接近0，那么生成的东西越根据概率最大
+        #SXP但超过了1的话就会比较混论。
+        temperature=0,  # 建议0.7-0.9（平衡连贯与多样）
+        eos_token_id=[tokenizer.eos_token_id] , # 固定：遇到结束符停止
+        pad_token_id = tokenizer.eos_token_id
+    )#SXP这里生成的outputs的size为【B，T】，是一个ids的矩阵！
 
-# 3. 创建Rotator实例
-rotator = Rotator(D=hidden_dim, position_ids=position_ids)
+    # TODO 4：将模型输出的token解码为文字（调用tokenizer.decode）
+    # 注意：用skip_special_tokens=True去掉无用符号
+    raw_response = tokenizer.decode(outputs[0], skip_special_tokens=True)  # 请补充outputs相关参数
 
-# 4. 执行旋转操作
-rotated_x = rotator.rotate(x)
+    # TODO 5：提取纯回复（去掉prompt部分，只保留模型生成的内容）
+    # 示例方向：按prompt格式分割，取“鸣人：”后面的内容
+    final_response =  raw_response.split("\n")# 请补充，比如 raw_response.split("鸣人：")[-1]
+    #final_response =  final_response.replace("Kobe Bryant:", "").replace("Bryant:", "").strip() #SXP调整输出格式
+    return final_response
 
-# 5. 输出结果（更详细的对比）
-print("=== 输入数据 ===")
-print("输入形状:", x.shape)
-print("位置0的向量:", x[0, 0, 0])  # [1,2,3,4]
-print("位置1的向量:", x[0, 0, 1])  # [5,6,7,8]
 
-print("\n=== 旋转参数 ===")
-print("位置0的cos值:", rotator.cos[0])
-print("位置0的sin值:", rotator.sin[0])
-print("位置1的cos值:", rotator.cos[1])
-print("位置1的sin值:", rotator.sin[1])
 
-print("\n=== 旋转结果 ===")
-print("旋转后形状:", rotated_x.shape)
-print("位置0旋转后:", rotated_x[0, 0, 0])
-print("位置1旋转后:", rotated_x[0, 0, 1])
+
+# 4. 主程序入口（固定，直接运行）
+if __name__ == "__main__":  
+#SXP这句是ai写的，是别的程序调用本程序的时候用的，也算长知识了。
+#SXP懒得删掉
+    # 第一步：下载加载模型  
+    #SXP已经在最上面了
+    if not model or not tokenizer:
+        exit()  # 模型加载失败则退出
+    
+    # 第二步：循环交互（固定）
+    print("\n=== 开始交互（输入'退出'结束）===")
+    while True:
+        user_text = input("You:")  #SXP这里有输入哦
+        if user_text in ["退出", "q"]:
+            print("模型：再见！")
+            break
+        # 调用交互逻辑（你补充的部分会在这里生效）
+        reply = model_interact(model, tokenizer, user_text)
+        print(f"Kobe Bryant:{reply}")

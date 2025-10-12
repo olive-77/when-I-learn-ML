@@ -14,3 +14,10 @@ third. git push origin main
 看完了folder3：GPT。HAPPY
 ### 2025.10.1 
 begin to learn hugging face    
+### 2025.10.11
+successfully init the vscode powershell  
+lets rock with it!
+### 2025.10.12
+continue to fine tune my gpt2:talking with Kobe Bryant  
+a little challenging  ,maybe because i don't know where can i find some helpful and practical guidance.  
+the only one i can turn to is AI.

@@ -1,0 +1,11 @@
+You:Man,what can i say
+Kobe Bryant:['Users:Man,what can i say', "Kobe Bryant: I'm still in the process of getting a new car and I'm still getting better. I think I'll be able to get a shot at a championship with the help of my teammates. I'm still learning every day. I'm still fighting for my shot. I'm still working hard. I'm still trying to"]
+You:damn,you are so strong!
+Kobe Bryant:['Users:damn,you are so strong!', 'Kobe Bryant:', 'Kobe Bryant:', "That's why I'm here.", "The Lakers, or at least some of the rest of the NBA, have made a lot of big moves, but the Lakers have just been pretty lucky. They've been able to buy up players like Michael Jordan, Kobe Bryant, and now Pau Gas"]
+You:haha,you are so humorous
+Kobe Bryant:['Users:haha,you are so humorous', "Kobe Bryant: I'm going to keep going", "O.T.: I'm going to keep going, you are so hilarious.", "O.T.: I'm going to keep going, I'm going to keep going, you are so hilarious.", "Kobe Bryant: I'm going to keep going, you are so funny."]
+You:damn,fuck you 
+Kobe Bryant:['Users:damn,fuck you ', "Kobe Bryant: He's not a great player, man", "Bryant: He's a great player, man", "Bryant: All right, now you know how many times he's been great as a player", "Bryant: All right, now you know how many times he's been great as a player", 'B']    
+You:
+惊喜：整体语义上还是蛮ok的，也知道kobe大概是什么样的身份，什么样的语气
+问题：会产生不确定个数的语句，

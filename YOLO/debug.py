@@ -1,39 +1,25 @@
 import torch
+from transformers import GPT2Tokenizer, GPT2LMHeadModel
+tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+model = GPT2LMHeadModel.from_pretrained('gpt2')  #以上代码可以直接从网页上面的官方介绍里面copy
+tokenizer.pad_token=tokenizer.eos_token #eos是句子末尾的符号，pad是batch之间不等长时的填充符号
 
-class Rotator:
-    """根据hidden_dim, 和position_ids生成对应的旋转位置编码,
-    和论文中定义略有不同, 一个个二维的子空间被
-    分割到了前后两部分, 分别进行旋转, 然后拼接起来
-    """
+with open(r'D:\My_CODE\Git_ML\when-I-learn-ML\YOLO\input.txt', 'r', encoding='utf-8') as f:
+    text = f.read()
+#len(text)
+text=tokenizer(text,return_tensors='pt')
+#生成标签
+labels = text['input_ids'].detach().clone()
+#让标签与输入文本错开，左移一个位置
+labels = labels.roll(-1, dims=1)
+labels[0, -1] = tokenizer.eos_token_id
 
-    def __init__(self, D, position_ids):
-        """
-        position_ids: [seq_len], D 和单个头的hidden_dim对应
-        """
-        base = 10000
-        d = D / 2
-        B = base ** (1 / d)
-        theta_base = 1.0 / (B ** (torch.arange(0, d)))  # 等比数列, $\Theta$
-        thetas = position_ids.outer(theta_base)  # [seq_len, D/2]
-        full_thetas = torch.cat((thetas, thetas), dim=1)  # [seq_len, D]
-        self.cos = full_thetas.cos()
-        self.sin = full_thetas.sin()
 
-    def rotate(self, x):
-        """
-        x: [bs, num_attention_heads, seq_len, D]
-        q: [bs, num_attention_heads, seq_len, D]
-        cos: [seq_len, D]
-        [x,y] @ [[cos, sin], [-sin, cos]] = [x*cos - y*sin, y*cos + x*sin]
-        = [x,y] * cos + [-y, x] * sin
-        """
-        return x * self.cos + Rotator.reverse_half(x) * self.sin
-
-    @staticmethod
-    def reverse_half(q):
-        """
-        q: [bs, num_attention_heads, seq_len, D] trick2
-        """
-        u = q[..., : q.shape[-1] // 2]  # 认为是各个二维子空间的第一维的向量集结
-        v = q[..., q.shape[-1] // 2 :]  # 认为是各个二维子空间的第二维的向量集结
-        return torch.cat((-v, u), dim=-1)
+optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+model.train()
+for epoch in range(3):
+    outputs = model(**text, labels=labels)
+    loss = outputs.loss
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()

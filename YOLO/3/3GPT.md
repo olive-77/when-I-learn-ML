@@ -1,4 +1,7 @@
 # 第三题题解过程
+
+该题代码直接看GPT.py吧
+
 ## 解题步骤  
 ### 1.李宏毅老师的课程
 ### 2.李沐的视频 & 论文
@@ -6,13 +9,22 @@
  ### 3.Karpathy的指导视频
 去看了hugging face和karpathy 的github，花了好久才找到GPT2的代码。（一开始是去openAI的官方Github上下的）。  
 #### 1.copy下来之后喂给豆包，一句句看懂了，当作预习，然后再去看视频。
-#### 2.看了篇 [CSDN:从头搭建GPT(Andrej Karpathy) 笔记](https://blog.csdn.net/level_code/article/details/136941813?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7EBlogOpenSearchComplete%7EPaidSort-1-136941813-blog-139716448.235%5Ev43%5Econtrol&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7EBlogOpenSearchComplete%7EPaidSort-1-136941813-blog-139716448.235%5Ev43%5Econtrol&utm_relevant_index=1)
+#### 2.看了篇 [CSDN:从头搭建GPT(Andrej Karpathy) 笔记](https://blog.csdn.net/level_code/article/details/136941813?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7EBlogOpenSearchComplete%7EPaidSort-1-136941813-blog-139716448.235%5Ev43%5Econtrol&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2%7Edefault%7EBlogOpenSearchComplete%7EPaidSort-1-136941813-blog-139716448.235%5Ev43%5Econtrol&utm_relevant_index=1)  _这不是重点_
 #### 3.直接绕过视频开始调程序  
 ### 4.根据推荐看了旋转位置编码RoPE
 ### 5.尝试学习hugging face 
-但是不会搭梯子，一条都跑不起来，搞了好久，最后放弃了
+但是不会搭梯子，一条都跑不起来，搞了好久，最后放弃了（bushi）    
+然后问别的工作室的学长，发现了hf mirror，windows系统的话只要在系统环境变量里面改一下end-point（准确来说是加上这一条），然后就可以直接跑了  
 
+### 6.又去看Karpathy的指导视频了
+因为最后只剩下一点时间，做hugging face的GPT2肯定是没时间了，闲着没事，就去看了  
+以下粗体为笔记：
 
+  #### 1.TF32 通过截断小数点后位数，（可以接受的精度损失），提高计算效率。当然也可以使用PF16，但是后者损失了数据范围，在计算梯度的时候可能会出现问题，所以要做一个scale，就会比较麻烦。（但是Karpathy在展示的时候又没有用到scale，加了两行代码就好了（1：47：--）
+  #### 2. torch.compile 专门针对pytorch设置的编译器，几乎是默认要使用的。一般来说，会在model定义完了之后加上一句model=torch.compile (model)   原理大概是识别可以融合的算子。
+ #### 3.FlashAttention  （其实还没有很懂）  但是看他写的代码是scaled-dot-product-attention来代替原来的一系列计算。突然想起来transformers论文里面用的也是这个啊 ：“We call our particular attention "Scaled Dot-Product Attention" (Figure 2). ”这就是真的不太懂了。这两个不是一个东西吗
+ #### 4.cuda中的大多用2的幂次作为线程块大小，所以要用64，128诸如此类的数字   
+ 到截止日为止看完了section1&2.也意识到了自己一开始做这道题的时候只关注训练结果有多么愚蠢。“倒也不必强求结果，学习过程才更为重要。”不过以后再尝试这个项目的时候会不一样就很好了
  ## 遇到的问题
 1. Karpathy的视频长达4个小时。加上是英文，刚开始看就感觉很痛苦  
 2. 第一遍训练的时候，到后半段迭代，训练集的损失确实在逐步下降，但是测试集的损失基本趋于稳定，甚至开始缓慢上升。
@@ -25,23 +37,23 @@
 ##  对策
 1. 不仔细看网课了（遇到困难要像水一样）  
 2. 记录最佳训练结果；也有可能是测试集太小了，波动性大  
-3. 换一下输入文本，然后再加上自己预定的开始词 （用了哈利波特） 
-4. 调整批次大小，最大限度利用xpu并行空间大小 
+3. 换一下输入文本，然后再加上自己预定的开始词 （用了哈利波特）   
+4. 1 调整批次大小，最大限度利用xpu并行空间大小 
    ####  关于批次大小
     i.先测试出xpu的最大batch-size  
     ii.最大的不一定是最好的。比如我注意到我在训练时cpu占用率比较低，是因为xpu运算规模和cpu的预处理、传输速度不匹配。若批次太大导致传输耗时过长 → 减小批次，让 CPU 能 “持续喂数据”，提升两者利用率；
-若批次太小导致显卡计算耗时过短 → 用低精度增大批次，让显卡 “充分干活”，同时增加 CPU 工作量。（但是这一点目前还只是理论上的了解，还没有实践检验）
-5. 加入Intel-extension-for-pytorch,最大程度激活xpu算力（据豆包说
+   若批次太小导致显卡计算耗时过短 → 用低精度增大批次，让显卡 “充分干活”，同时增加 CPU 工作量。（但是这一点目前还只是理论上的了解，还没有实践检验）
+4. 2 加入Intel-extension-for-pytorch,最大程度激活xpu算力（据豆包说
 是因为普通torch不能很好适配xpu硬件）
-
+5. 关于上面两个对策，其实是豆包给出的建议，看完karpathy的视频后发现这两个多少有点鸡肋。具体的可以看上面解题步骤最后面的笔记  
  ##  笔记 ：about model
-0. 很遗憾，写代码的时候总是要把论文里的哪个架构图放在旁边，不然总是会忘记某几步。
-1. feedforward是为了给block增加非线性。因为前面的mask multi head为矩阵惩罚，说到底还是线性变化  
+0. 很遗憾，写代码的时候总是要把论文里的那个架构图放在旁边，不然总是会忘记某几步。（不过还好，时间久了就记住了， 吧）
+1. feedforward是为了给block增加非线性。因为前面的mask multi head为矩阵乘法，说到底还是线性变化  
 paper：This consists of two linear transformations with a ReLU activation in between.
  FFN(x) = max(0xW1 +b1)W2 +b
 2. block size是长文本分块时的长度  
-  batch size则是一次同时处理的句子数
-3. ？？？ GPT2 模型上的更改；zero-shot
+    batch size则是一次同时处理的句子数
+3. ？？？ GPT2 模型上的更改；zero-shot（截止日前这方面看的最多的还是attention is all you need这篇，GPT系列基本是刷李沐视频的时候零星看到的一些
 4. dropout 可以减少同层神经元之间的依赖，防止overfitting。在transformer中应该可以认为每个token对应的为神经元
 5. 使用单一属性文本有利于提高训练效果，避免模型confusion；另外稍微处理一下重复部分
 6. 最常用的tokenize ：BPE 的核心原理：  
@@ -50,10 +62,12 @@ paper：This consists of two linear transformations with a ReLU activation in be
 例：初始拆分 “low”→“l”“o”“w”，“lower”→“l”“o”“w”“e”“r”，若 “ow” 共现频率最高，则合并为 “ow”，后续 “low” 拆分为 “l”“ow”。  
 编码逻辑：对新文本，优先匹配最长可能的 Token（贪心匹配），确保拆分效率最高。  
 7. 旋转位置编码RoPE ，矩阵乘法，将高纬度（偶数维度）拆分成多个正交平面，在每个平面上进行旋转  
-需要注意的是角度的选取，通过避开PI从而使每个角度各不相同。实践时因为旋转矩阵是稀疏矩阵(对角矩阵），计算成本十分庞大，所以会
-进行一点结构上的变化，用向量的叉乘形成角度的矩阵；把原始矩阵分成两半，配凑旋转的哪个表达式。  
-补充一下，transformers一开始使用的绝对位置编码器在语句长度超出训练范围时不适用。
-
+需要注意的是角度的选取，通过避开PI从而使每个角度各不相同。实践时因为旋转矩阵是稀疏矩阵（对角矩阵），计算成本十分庞大，所以会
+进行一点结构上的变化，用向量的叉乘形成角度的矩阵；把原始矩阵分成两半，配凑旋转的哪个表达式。    
+补充一下，transformers一开始使用的绝对位置编码器在语句长度超出训练范围时不适用。    
+8. 交叉熵CrossEntropy ，一般用于分类问题。而均方MSE一般用于回归问题    
+9. 一般不用SGD而使用Adam，另外，AdamW会优于Adam。后者这个优化的原理没有仔细了解，直接当黑箱用就完了   
+10. Scale（缩放因子，通常是√d_k，d_k 是 Q/K 的维度）的主要目的是防止注意力分数在维度较高时数值过大，导致 softmax 梯度消失（并非传统意义上的 normalization）。
 ## 笔记 ：about code
 1. nn.module 默认要有一个forward函数，然后像 model(xb, yb) 就会直接调用forward函数。当然也可以用 m.forward()表示，但这样会丧失有些默认pytorch服务，不推荐。  
 2. q @ k 表示矩阵的乘法
@@ -62,12 +76,13 @@ paper：This consists of two linear transformations with a ReLU activation in be
 5. 使用。item()将张量转化为数值，从而与普通数据进行比较  
 6. contiguous函数是使得数据在内存上连续，比如矩阵转置时会变得不连续。
 7. view是改变矩阵形状。但这里有个前提是矩阵内存是连续的，也就是说这玩意与前者绑定
-
-## 输出说明：
+8. 调用函数的时候可以通过“None”，将两个形似但还是不太一样的函数写在一起。  
+9. model=GPT(GPTconfig(vocab_size=...))   这里是可以手动调成2的幂次的数字的  
+## 输出png说明：
 1.0 初始代码，直接运行  
 1.1 往input.txt里加入了哈利波特的文本。其数据量应该是大于莎翁的数据的，但是生成结果仍然是这种剧本格式。  
 1.2 把莎翁的删了，用了intel-extension-for-pytorch，但是感觉跟没用一样，没有加速。另外，生成的文本完全基于哈利波特，可是我还是看不懂，这才意识到这个规模的训练可能并不能生成有意义的语言。  
-但是注意到两个损失神奇的接近，想了一下，复制书本内容的时候，像一些出版声明之类的，每本书都一样，虽然已经处理了一部分，但是应该还是有很多类似的地方没有发现，导致测试集非常不巧的被使用过了。但是这好像也没有那么合理。因为毕竟我选取了10percent的数据作为测试集，这里面就算真有上述重复部分，应该也不会很多啊（和全文相比，书前书后的一些非情节部分真的可以忽略不计啊）。  所以这一点应该是还没有解决
+但是注意到两个损失（train和test）神奇的接近，想了一下，复制书本内容的时候，像一些出版声明之类的，每本书都一样，虽然已经处理了一部分，但是应该还是有很多类似的地方没有发现，导致测试集非常不巧的被使用过了。但是这好像也没有那么合理。因为毕竟我选取了10percent的数据作为测试集，这里面就算真有上述重复部分，应该也不会很多啊（和全文相比，书前书后的一些非情节部分真的可以忽略不计啊）。  所以这一点应该是还没有解决
 如果学长有什么别的想法的话最好了。
 
 
